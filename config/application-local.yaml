@@ -1,0 +1,28 @@
+server:
+  port: 8701
+
+gmail:
+  sender_email: keepguard.ia@gmail.com
+  client_secrets_file: ./secure/credentials-local.json
+  token_file: ./secure/token.json
+  scopes:
+    - https://www.googleapis.com/auth/gmail.send
+
+redis:
+  host: localhost
+  port: 6380
+  password: ""
+  db: 0
+  key_prefix: "local:gmail:token:"
+
+monitoring:
+  check_interval_seconds: 60
+  alert_before_expiry_minutes: 10
+  metrics_enabled: true
+  alerts_enabled: false
+
+log:
+  level: debug
+  format: json
+
+env: local

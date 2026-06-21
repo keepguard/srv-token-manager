@@ -1,0 +1,36 @@
+server:
+  port: 8700
+
+gmail:
+  sender_email: keepguard.ia@gmail.com
+  client_secrets_file: /app/secure/service-account.json
+  token_file: /app/secure/token.json
+  scopes:
+    - https://www.googleapis.com/auth/gmail.send
+  auth_mode: service-account  # Produção usa Service Account
+
+redis:
+  mode: cluster
+  cluster_nodes:
+    - redis-node-1:7000
+    - redis-node-2:7001
+    - redis-node-3:7002
+    - redis-node-4:7003
+    - redis-node-5:7004
+    - redis-node-6:7005
+  password: ""
+  key_prefix: "prod:gmail:token:"
+
+monitoring:
+  check_interval_seconds: 60
+  alert_before_expiry_minutes: 10
+  metrics_enabled: true
+  alerts_enabled: true
+  alert_webhook_url: ""
+  alert_email: ""
+
+log:
+  level: warning
+  format: json
+
+env: prod

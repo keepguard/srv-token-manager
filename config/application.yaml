@@ -1,0 +1,58 @@
+app:
+  name: srv-token-manager
+  version: "1.0.8"
+
+server:
+  host: 0.0.0.0
+  port: 8700
+  read_timeout: 30s
+  write_timeout: 30s
+
+token_manager:
+  refresh_strategy: proactive
+  
+  # Access Token (Google TTL fixo: 1 hora / 3600s)
+  access_token:
+    ttl_seconds: 3600
+    refresh_before_expiry_minutes: 5
+    cache_ttl_seconds: 3300
+  
+  # Refresh Token (sem TTL fixo, válido até revogação)
+  refresh_token:
+    max_inactivity_days: 180
+    health_check_interval_days: 30
+    max_tokens_per_account: 100
+  
+  retry:
+    max_attempts: 3
+    backoff_multiplier: 2
+    initial_delay_seconds: 1
+
+gmail:
+  sender_email: keepguard.ia@gmail.com
+  client_secrets_file: ./secure/credentials-local.json
+  token_file: ./secure/token.json
+  scopes:
+    - https://www.googleapis.com/auth/gmail.send
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  db: 0
+  key_prefix: "local:gmail:token:"
+  max_connections: 50
+  socket_timeout: 5
+  retry_on_timeout: true
+
+monitoring:
+  check_interval_seconds: 60
+  alert_before_expiry_minutes: 10
+  metrics_enabled: true
+  alerts_enabled: false
+
+log:
+  level: debug
+  format: json
+
+env: local
