@@ -83,11 +83,15 @@ class RefreshTokenUseCase:
     
     async def _get_from_cache(self, email: Email) -> Optional[Dict[str, Any]]:
         """Get token from cache."""
+        if not self.cache_port:
+            return None
         cache_key = f"token:{email}"
         return await self.cache_port.get(cache_key)
     
     async def _update_cache(self, email: Email, token: Token) -> None:
         """Update token in cache."""
+        if not self.cache_port:
+            return
         cache_key = f"token:{email}"
         token_data = token.to_dict()
         # Cache for 55 minutes (3300 seconds)

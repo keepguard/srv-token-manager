@@ -1,0 +1,2 @@
+# This file ensures the secure directory is tracked by git
+# Credentials files are gitignored but the directory structure is preserved

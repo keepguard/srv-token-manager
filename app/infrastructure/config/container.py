@@ -111,6 +111,7 @@ class Container:
                 repository_port=self.get_token_repository(),
                 oauth2_client_port=self.get_oauth2_client(),
                 alert_port=self.get_alert_port(),
+                cache_port=self.get_redis_cache(),
                 refresh_before_minutes=self.settings.token_manager.refresh_before_expiry_minutes,
                 check_interval_seconds=self.settings.monitoring.check_interval_seconds
             )

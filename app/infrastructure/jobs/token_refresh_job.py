@@ -11,6 +11,7 @@ from app.domain.errors.token_errors import TokenRefreshError
 from app.application.ports.outbound.token_repository_port import TokenRepositoryPort
 from app.application.ports.outbound.oauth2_client_port import OAuth2ClientPort
 from app.application.ports.outbound.alert_port import AlertPort
+from app.application.ports.outbound.cache_port import CachePort
 from app.application.usecases.refresh_token_usecase import RefreshTokenUseCase
 from app.infrastructure.monitoring.metrics import increment_token_refresh, update_token_expiry
 
@@ -25,12 +26,14 @@ class TokenRefreshJob:
         repository_port: TokenRepositoryPort,
         oauth2_client_port: OAuth2ClientPort,
         alert_port: AlertPort,
+        cache_port: CachePort = None,
         refresh_before_minutes: int = 5,
         check_interval_seconds: int = 60
     ):
         self.repository_port = repository_port
         self.oauth2_client_port = oauth2_client_port
         self.alert_port = alert_port
+        self.cache_port = cache_port
         self.refresh_before_minutes = refresh_before_minutes
         self.check_interval_seconds = check_interval_seconds
         self.is_running = False
@@ -109,7 +112,7 @@ class TokenRefreshJob:
             
             # Create refresh use case
             refresh_use_case = RefreshTokenUseCase(
-                cache_port=None,  # Will be injected by DI
+                cache_port=self.cache_port,
                 repository_port=self.repository_port,
                 oauth2_client_port=self.oauth2_client_port,
                 alert_port=self.alert_port

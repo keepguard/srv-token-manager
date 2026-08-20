@@ -9,7 +9,7 @@ gmail:
     - https://www.googleapis.com/auth/gmail.send
 
 redis:
-  host: redis-standalone
+  host: redis
   port: 6379
   mode: standalone
   password: ""
