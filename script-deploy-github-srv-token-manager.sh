@@ -10,8 +10,10 @@ RED='\033[0;31m'
 NC='\033[0m'
 
 SERVICE_NAME="srv-token-manager"
-CONFIG_FILE="config/application.yaml"
-DOCKER_COMPOSE_FILE="../../../docker/infra/api/docker-compose.yml"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+CONFIG_FILE="${SCRIPT_DIR}/config/application.yaml"
+DOCKER_COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
 
 # Funções de log
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }
@@ -59,6 +61,50 @@ else
 fi
 
 # Extrai versão do config
+
+# Commita e faz push das alterações do repositório do serviço após o release
+commit_and_push_release() {
+    local release_version=$1
+    local repo_dir=${2:-"${SCRIPT_DIR}"}
+
+    log_step "Commit e push das alterações (Release ${release_version})..."
+
+    if ! git -C "${repo_dir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        log_warning "Diretório não é um repositório git: ${repo_dir}. Pulando commit/push."
+        return 0
+    fi
+
+    pushd "${repo_dir}" > /dev/null
+
+    git add -A
+    if git diff --cached --quiet; then
+        log_info "Nenhuma alteração pendente para commit."
+        popd > /dev/null
+        return 0
+    fi
+
+    if ! git commit -m "$(cat <<EOF
+Release ${release_version}
+
+EOF
+)"; then
+        log_error "Falha ao criar commit do release ${release_version}"
+        popd > /dev/null
+        return 1
+    fi
+
+    if ! git push; then
+        log_error "Falha ao fazer push do release ${release_version}"
+        popd > /dev/null
+        return 1
+    fi
+
+    log_success "Commit e push concluídos (Release ${release_version})"
+    popd > /dev/null
+    return 0
+}
+
+
 VERSION=$(get_current_version)
 
 if [ -z "$VERSION" ]; then
@@ -113,37 +159,39 @@ else
 fi
 log_success "docker-compose.yml atualizado"
 
-# 4. Deploy no Docker Compose (se parâmetro "up")
-if [ "$DEPLOY_DOCKER" = true ]; then
-    log_info "Fazendo deploy no Docker Compose..."
-    cd ../../../docker/infra/api
-    docker-compose pull ${SERVICE_NAME}
-    docker-compose up -d --force-recreate ${SERVICE_NAME}
-    
-    if [ $? -eq 0 ]; then
-        log_success "Container ${SERVICE_NAME} iniciado com sucesso"
+    # 4. Deploy no Docker Compose (se parâmetro "up")
+    if [ "$DEPLOY_DOCKER" = true ]; then
+        log_info "Fazendo deploy no Docker Compose..."
+        cd "${PROJECT_ROOT}/docker"
+        docker compose pull ${SERVICE_NAME}
+        docker compose up -d --force-recreate ${SERVICE_NAME}
         
-        # Aguardar health check
-        log_info "Aguardando health check..."
-        sleep 10
-        
-        HEALTH_URL="http://localhost:8602/health"
-        if curl -s ${HEALTH_URL} | grep -q "UP"; then
-            log_success "Serviço está saudável!"
+        if [ $? -eq 0 ]; then
+            log_success "Container ${SERVICE_NAME} iniciado com sucesso"
+            
+            # Aguardar health check
+            log_info "Aguardando health check..."
+            sleep 10
+            
+            HEALTH_URL="http://localhost:8700/health"
+            if curl -s ${HEALTH_URL} | grep -q "UP"; then
+                log_success "Serviço está saudável!"
+            else
+                log_warning "Verificar logs: docker logs srv-token-manager"
+            fi
         else
-            log_warning "Verificar logs: docker logs srv-token-manager"
+            log_warning "Falha ao iniciar container ${SERVICE_NAME}"
         fi
-    else
-        log_warning "Falha ao iniciar container ${SERVICE_NAME}"
+        
+        cd - > /dev/null
     fi
-    
-    cd - > /dev/null
-fi
 
 # 5. Auto-incrementa versão no config
 log_info "Incrementando versão no config..."
 NEXT_VERSION=$(increment_version "$VERSION")
 update_config_version "$NEXT_VERSION"
+
+commit_and_push_release "${VERSION}" "${SCRIPT_DIR}"
 
 log_success "============================================"
 log_success "  Deploy concluído com sucesso!"
