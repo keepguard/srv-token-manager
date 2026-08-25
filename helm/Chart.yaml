@@ -1,0 +1,6 @@
+apiVersion: v2
+name: srv-token-manager
+description: Helm Chart para o Serviço srv-token-manager do KeepGuard
+type: application
+version: 1.0.8
+appVersion: "1.0.8"

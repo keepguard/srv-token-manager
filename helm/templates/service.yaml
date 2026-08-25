@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: srv-token-manager
+  labels:
+    app: srv-token-manager
+spec:
+  selector:
+    app: srv-token-manager
+  ports:
+  - port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.port }}

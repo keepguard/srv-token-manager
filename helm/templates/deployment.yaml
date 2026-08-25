@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: srv-token-manager
+  labels:
+    app: srv-token-manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: srv-token-manager
+  template:
+    metadata:
+      labels:
+        app: srv-token-manager
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: srv-token-manager
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+        - name: SPRING_CLOUD_COMPATIBILITY_VERIFIER_ENABLED
+          value: "false"
+        - name: APP_ENV
+          value: {{ .Values.env.appEnv | quote }}
+        - name: REDIS_HOST
+          value: {{ .Values.env.redisHost | quote }}
+        - name: REDIS_PORT
+          value: {{ .Values.env.redisPort | quote }}
+        ports:
+        - containerPort: {{ .Values.service.port }}
+        volumeMounts:
+        - name: secure-volume
+          mountPath: /app/secure
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+      volumes:
+      - name: secure-volume
+        secret:
+          secretName: srv-token-secure
