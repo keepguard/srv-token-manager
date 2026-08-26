@@ -54,11 +54,14 @@ class TokenRepository(TokenRepositoryPort):
             # Convert token to dict
             token_data = token.to_dict()
             
-            # Write to file
-            with open(self.token_file, 'w', encoding='utf-8') as f:
-                json.dump(token_data, f, indent=2, ensure_ascii=False)
-            
-            logger.info("repository_save_success", email=str(token.email))
+            # Write to file if writable
+            try:
+                with open(self.token_file, 'w', encoding='utf-8') as f:
+                    json.dump(token_data, f, indent=2, ensure_ascii=False)
+                logger.info("repository_save_success", email=str(token.email))
+            except (OSError, PermissionError) as write_err:
+                # No Kubernetes, secrets montadas sao Read-Only; o token renovado fica ativo no Redis Cache
+                logger.warning("repository_save_skipped_readonly_fs", email=str(token.email), reason=str(write_err))
             
         except Exception as e:
             logger.error("repository_save_failed", email=str(token.email), error=str(e))

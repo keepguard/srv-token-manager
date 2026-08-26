@@ -2,6 +2,13 @@
 
 Sistema profissional de gerenciamento de tokens OAuth2 para Gmail com cache Redis e refresh proativo.
 
+
+## 📋 Renovar token
+python3 keepguard-core/backend/srv/srv-email-google-sender/scripts/generate_token.py \
+  --client-secrets keepguard-core/backend/srv/srv-token-manager/secure/credentials-local.json \
+  --token-file keepguard-core/backend/srv/srv-token-manager/secure/token.json
+
+
 ## 📋 Visão Geral
 
 O **srv-token-manager** é um microserviço Python que gerencia tokens OAuth2 do Gmail de forma centralizada, oferecendo:
