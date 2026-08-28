@@ -130,7 +130,7 @@ log_info "============================================"
 
 # 1. Build Docker Image
 log_info "Construindo imagem Docker..."
-docker build -t "${IMAGE_TAG}" -t "${IMAGE_LATEST}" .
+docker build --platform linux/amd64 -t "${IMAGE_TAG}" -t "${IMAGE_LATEST}" .
 
 if [ $? -ne 0 ]; then
     log_error "Falha ao construir imagem Docker"
