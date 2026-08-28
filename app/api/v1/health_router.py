@@ -16,9 +16,10 @@ def get_token_health_check_usecase():
     return container.get_token_health_check_usecase()
 
 
+@router.get("")
 @router.get("/")
 async def health_check() -> Dict[str, Any]:
-    """Basic health check endpoint."""
+    """Basic health check. Atende /health e /health/ sem 307."""
     logger.info("health_check_requested")
     
     return {
