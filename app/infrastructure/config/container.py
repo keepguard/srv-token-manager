@@ -8,6 +8,7 @@ from app.infrastructure.cache.redis_cache import RedisCache
 from app.infrastructure.oauth2.google_oauth2_client import GoogleOAuth2Client
 from app.infrastructure.repository.token_repository import TokenRepository
 from app.infrastructure.alerts.webhook_alert import WebhookAlert
+from app.infrastructure.audit_publisher import AuditEventPublisher
 from app.infrastructure.jobs.token_refresh_job import TokenRefreshJob
 # Leader election removido para simplificar implementação local
 from app.application.usecases.get_token_usecase import GetTokenUseCase
@@ -65,6 +66,11 @@ class Container:
                 webhook_url=self.settings.monitoring.alert_webhook_url
             )
         return self._instances["alert_port"]
+
+    def get_audit_publisher(self) -> AuditEventPublisher:
+        if "audit_publisher" not in self._instances:
+            self._instances["audit_publisher"] = AuditEventPublisher()
+        return self._instances["audit_publisher"]
     
     def get_get_token_usecase(self) -> GetTokenUseCase:
         """Get token use case instance."""
@@ -83,7 +89,8 @@ class Container:
                 cache_port=self.get_redis_cache(),
                 repository_port=self.get_token_repository(),
                 oauth2_client_port=self.get_oauth2_client(),
-                alert_port=self.get_alert_port()
+                alert_port=self.get_alert_port(),
+                audit_publisher=self.get_audit_publisher(),
             )
         return self._instances["refresh_token_usecase"]
     

@@ -31,6 +31,12 @@ spec:
           value: {{ .Values.env.redisHost | quote }}
         - name: REDIS_PORT
           value: {{ .Values.env.redisPort | quote }}
+        - name: RABBITMQ_HOST
+          value: {{ .Values.env.rabbitmqHost | quote }}
+        - name: RABBITMQ_PORT
+          value: {{ .Values.env.rabbitmqPort | quote }}
+        - name: AUDIT_EXCHANGE
+          value: {{ .Values.env.auditExchange | quote }}
         ports:
         - containerPort: {{ .Values.service.port }}
         volumeMounts:

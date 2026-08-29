@@ -15,6 +15,7 @@ from app.application.ports.outbound.alert_port import AlertPort
 from app.application.ports.outbound.cache_port import CachePort
 from app.application.usecases.refresh_token_usecase import RefreshTokenUseCase
 from app.infrastructure.monitoring.metrics import increment_token_refresh, update_token_expiry
+from app.infrastructure.audit_publisher import AuditEventPublisher
 
 logger = structlog.get_logger()
 
@@ -119,7 +120,8 @@ class TokenRefreshJob:
                 cache_port=self.cache_port,
                 repository_port=self.repository_port,
                 oauth2_client_port=self.oauth2_client_port,
-                alert_port=self.alert_port
+                alert_port=self.alert_port,
+                audit_publisher=AuditEventPublisher(),
             )
             
             # Refresh token

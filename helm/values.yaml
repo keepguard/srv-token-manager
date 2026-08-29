@@ -16,6 +16,9 @@ env:
   appEnv: dev
   redisHost: "redis"
   redisPort: 6379
+  rabbitmqHost: "rabbitmq-service"
+  rabbitmqPort: "5672"
+  auditExchange: "srv-audit-exchange-prod"
 
 imagePullSecrets:
   - name: ghcr-secret

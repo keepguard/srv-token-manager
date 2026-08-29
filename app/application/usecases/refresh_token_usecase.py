@@ -11,6 +11,7 @@ from app.application.ports.outbound.cache_port import CachePort
 from app.application.ports.outbound.token_repository_port import TokenRepositoryPort
 from app.application.ports.outbound.oauth2_client_port import OAuth2ClientPort
 from app.application.ports.outbound.alert_port import AlertPort
+from app.infrastructure.audit_publisher import AuditEventPublisher
 
 logger = structlog.get_logger()
 
@@ -23,12 +24,14 @@ class RefreshTokenUseCase:
         cache_port: CachePort,
         repository_port: TokenRepositoryPort,
         oauth2_client_port: OAuth2ClientPort,
-        alert_port: AlertPort
+        alert_port: AlertPort,
+        audit_publisher: Optional[AuditEventPublisher] = None,
     ):
         self.cache_port = cache_port
         self.repository_port = repository_port
         self.oauth2_client_port = oauth2_client_port
         self.alert_port = alert_port
+        self.audit_publisher = audit_publisher
     
     async def execute(self, email: Email) -> Dict[str, Any]:
         """Execute refresh token use case."""
@@ -67,11 +70,19 @@ class RefreshTokenUseCase:
                 new_expiry=new_expiry.to_iso_string(),
                 refresh_count=token.refresh_count
             )
-            
+
             return token.to_dict()
             
         except Exception as e:
             logger.error("refresh_token_failed", email=str(email), error=str(e))
+            if self.audit_publisher:
+                self.audit_publisher.publish(
+                    "TOKEN_REFRESH_FAILURE",
+                    "FAILURE",
+                    None,
+                    "TOKEN",
+                    self._mask_email(str(email)),
+                )
             
             # Send alert for refresh failure
             await self.alert_port.send_critical_alert(
@@ -80,7 +91,16 @@ class RefreshTokenUseCase:
             )
             
             raise TokenRefreshError(f"Failed to refresh token for {email}: {str(e)}") from e
-    
+
+    def _mask_email(self, email: str) -> str:
+        at = email.find("@")
+        if at <= 0:
+            return "***"
+        local = email[:at]
+        if len(local) <= 2:
+            return "***" + email[at:]
+        return local[:1] + "***" + email[at:]
+
     async def _get_from_cache(self, email: Email) -> Optional[Dict[str, Any]]:
         """Get token from cache."""
         if not self.cache_port:

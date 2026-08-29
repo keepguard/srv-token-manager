@@ -1,6 +1,6 @@
 app:
   name: srv-token-manager
-  version: "1.0.12"
+  version: "1.0.13"
 
 server:
   host: 0.0.0.0
