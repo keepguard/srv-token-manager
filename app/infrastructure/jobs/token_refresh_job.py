@@ -1,6 +1,7 @@
 """Token Refresh Background Job."""
 
 import asyncio
+import uuid
 import structlog
 from typing import List
 from datetime import datetime, timedelta
@@ -68,6 +69,7 @@ class TokenRefreshJob:
         """Main job loop."""
         while self.is_running:
             try:
+                structlog.contextvars.bind_contextvars(correlationId=str(uuid.uuid4()))
                 await self._check_and_refresh_tokens()
                 await asyncio.sleep(self.check_interval_seconds)
             except asyncio.CancelledError:
@@ -75,6 +77,8 @@ class TokenRefreshJob:
             except Exception as e:
                 logger.error("token_refresh_job_error", error=str(e))
                 await asyncio.sleep(self.check_interval_seconds)
+            finally:
+                structlog.contextvars.unbind_contextvars("correlationId")
     
     async def _check_and_refresh_tokens(self) -> None:
         """Check all tokens and refresh if needed."""

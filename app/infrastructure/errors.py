@@ -13,6 +13,7 @@ class ProblemDetail:
     status: int
     detail: str
     instance: Optional[str] = None
+    correlation_id: Optional[str] = None
     trace_id: Optional[str] = None
     context: Dict[str, Any] = field(default_factory=dict)
 
@@ -27,8 +28,9 @@ class ProblemDetail:
         
         if self.instance:
             result["instance"] = self.instance
-        if self.trace_id:
-            result["traceId"] = self.trace_id
+        cid = self.correlation_id or self.trace_id
+        if cid:
+            result["correlationId"] = cid
         if self.context:
             result["context"] = self.context
             

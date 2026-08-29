@@ -8,6 +8,7 @@ import structlog
 from app.infrastructure.config.settings import load_settings
 from app.infrastructure.config.container import Container
 from app.infrastructure.monitoring.logger import configure_logging, get_logger
+from app.infrastructure.monitoring.correlation_middleware import CorrelationIdMiddleware
 from app.infrastructure.monitoring.metrics import update_app_info
 from app.api.v1 import health_router, token_router, metrics_router
 
@@ -68,6 +69,7 @@ app = FastAPI(
 )
 
 # Add CORS middleware
+app.add_middleware(CorrelationIdMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure appropriately for production
