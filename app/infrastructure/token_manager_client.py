@@ -1,4 +1,4 @@
-"""Token Manager Client para integração com srv-email-google-sender."""
+"""Token Manager Client para integração com srv-email-sender."""
 
 import asyncio
 import httpx

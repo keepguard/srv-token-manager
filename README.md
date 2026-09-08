@@ -4,9 +4,8 @@ Sistema profissional de gerenciamento de tokens OAuth2 para Gmail com cache Redi
 
 
 ## 📋 Renovar token
-python3 keepguard-core/backend/srv/srv-email-google-sender/scripts/generate_token.py \
-  --client-secrets keepguard-core/backend/srv/srv-token-manager/secure/credentials-local.json \
-  --token-file keepguard-core/backend/srv/srv-token-manager/secure/token.json
+
+Coloque `credentials-local.json` e `token.json` em `secure/` deste serviço (já montado pelo Docker Compose). O refresh em runtime fica a cargo do próprio `srv-token-manager`.
 
 
 ## 📋 Visão Geral
@@ -26,7 +25,7 @@ O **srv-token-manager** é um microserviço Python que gerencia tokens OAuth2 do
 ┌─────────────────────────────────────────────────────────────┐
 │                     Aplicações Clientes                      │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────┐  │
-│  │ email-google-   │  │ Outros serviços │  │ Scripts     │  │
+│  │ srv-email-      │  │ Outros serviços │  │ Scripts     │  │
 │  │ sender          │  │                 │  │             │  │
 │  └─────────┬───────┘  └─────────┬───────┘  └─────┬───────┘  │
 └────────────┼────────────────────┼─────────────────┼──────────┘
@@ -106,9 +105,9 @@ poetry install
 
 3. **Configure as credenciais:**
 ```bash
-# Copie as credenciais do srv-email-google-sender
-cp ../srv-email-google-sender/secure/credentials-local.json secure/
-cp ../srv-email-google-sender/secure/token.json secure/
+# Coloque as credenciais OAuth Gmail em secure/ deste serviço
+# credentials-local.json e token.json (já usados pelo Docker Compose)
+ls secure/credentials-local.json secure/token.json
 ```
 
 4. **Inicie o Redis:**
@@ -303,29 +302,22 @@ docker-compose pull srv-token-manager
 docker-compose up -d srv-token-manager
 ```
 
-## 🔗 Integração com srv-email-google-sender
+## 🔗 Integração com srv-email-sender
 
-### TokenManagerClient
+O `srv-email-sender` (Go) já consome tokens via HTTP deste serviço (`GMAIL_TOKEN_MANAGER_BASE_URL`). O contrato RabbitMQ mantém o nome histórico das exchanges (`srv-email-google-sender-exchange-*`).
+
+### TokenManagerClient (Python, referência)
 
 ```python
 from app.infrastructure.token_manager_client import TokenManagerClient
 
-# Inicializar cliente
 client = TokenManagerClient(
     token_manager_url="http://srv-token-manager:8700",
     email="keepguard.ia@gmail.com"
 )
 
-# Obter credenciais
 creds = await client.get_credentials()
 ```
-
-### Modificações Necessárias
-
-1. **Adicionar TokenManagerClient** ao srv-email-google-sender
-2. **Remover lógica de refresh local**
-3. **Configurar URL do token manager**
-4. **Manter apenas envio de e-mail**
 
 ## 📝 Logs e Troubleshooting
 
