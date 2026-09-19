@@ -39,6 +39,18 @@ spec:
           value: {{ .Values.env.auditExchange | quote }}
         ports:
         - containerPort: {{ .Values.service.port }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.service.port }}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.service.port }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
         volumeMounts:
         - name: secure-volume
           mountPath: /app/secure
