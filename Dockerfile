@@ -1,16 +1,19 @@
+# syntax=docker/dockerfile:1
 # Build stage
 FROM python:3.11-slim as builder
 
 WORKDIR /app
 
-# Install poetry
-RUN pip install --no-cache-dir poetry==1.8.0
+# Install poetry with pip cache
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install poetry==1.8.0
 
 # Copy dependency files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies
-RUN poetry config virtualenvs.create false \
+# Install dependencies with poetry cache
+RUN --mount=type=cache,target=/root/.cache/pypoetry \
+    poetry config virtualenvs.create false \
     && poetry install --no-dev --no-interaction --no-ansi
 
 # Runtime stage
