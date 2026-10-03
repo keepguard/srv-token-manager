@@ -21,7 +21,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SERVICE_NAME="srv-token-manager"
-DOCKER_COMPOSE_DIR="${SCRIPT_DIR}/../../docker"
+DOCKER_COMPOSE_DIR="${SCRIPT_DIR}/../../../docker"
 DOCKER_COMPOSE_FILE="${DOCKER_COMPOSE_DIR}/docker-compose.yml"
 REGISTRY="ghcr.io/keepguard"
 
