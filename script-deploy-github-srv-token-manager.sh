@@ -73,6 +73,7 @@ fi
 
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 log_step "1/3 Verificando repositório Git na branch '${CURRENT_BRANCH}'..."
+git pull origin "${CURRENT_BRANCH}" --rebase || true
 git add -A
 if ! git diff --cached --quiet; then
     log_info "Criando commit com alterações pendentes..."
@@ -113,10 +114,26 @@ echo
 if [ "$DEPLOY_DOCKER" = true ]; then
     log_step "Construindo imagem localmente para o Docker Compose..."
     if command -v docker >/dev/null 2>&1; then
-        DOCKER_BUILDKIT=1 docker build -f Dockerfile -t "${REGISTRY}/${SERVICE_NAME}:local" .
+        if [ "$CURRENT_BRANCH" = "main" ]; then
+            PRIMARY_TAG="${REGISTRY}/${SERVICE_NAME}:${BUILD_SHA}"
+            LATEST_TAG="${REGISTRY}/${SERVICE_NAME}:latest"
+        else
+            PRIMARY_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-${BUILD_SHA}"
+            LATEST_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-latest"
+        fi
+        DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -f Dockerfile -t "${PRIMARY_TAG}" -t "${LATEST_TAG}" .
+        docker push "${PRIMARY_TAG}" || true
+        docker push "${LATEST_TAG}" || true
         if [ -d "${DOCKER_COMPOSE_DIR}" ] && [ -f "${DOCKER_COMPOSE_FILE}" ]; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                sed -i '' "s|image: ${REGISTRY}/${SERVICE_NAME}:.*|image: ${PRIMARY_TAG}|g" "${DOCKER_COMPOSE_FILE}"
+            else
+                sed -i "s|image: ${REGISTRY}/${SERVICE_NAME}:.*|image: ${PRIMARY_TAG}|g" "${DOCKER_COMPOSE_FILE}"
+            fi
+            log_info "docker-compose.yml atualizado para ${PRIMARY_TAG}"
             cd "${DOCKER_COMPOSE_DIR}"
-            docker compose up -d --force-recreate "${SERVICE_NAME}" || true
+            docker compose pull "${SERVICE_NAME}" || true
+            docker compose up -d --no-deps --force-recreate "${SERVICE_NAME}" || true
             log_success "Container ${SERVICE_NAME} recriado localmente!"
         fi
     else
