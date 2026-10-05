@@ -121,7 +121,7 @@ if [ "$DEPLOY_DOCKER" = true ]; then
             PRIMARY_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-${BUILD_SHA}"
             LATEST_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-latest"
         fi
-        DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -f Dockerfile -t "${PRIMARY_TAG}" -t "${LATEST_TAG}" .
+        DOCKER_BUILDKIT=1 docker build -f Dockerfile -t "${PRIMARY_TAG}" -t "${LATEST_TAG}" .
         docker push "${PRIMARY_TAG}" || true
         docker push "${LATEST_TAG}" || true
         if [ -d "${DOCKER_COMPOSE_DIR}" ] && [ -f "${DOCKER_COMPOSE_FILE}" ]; then
