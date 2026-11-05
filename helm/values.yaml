@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/keepguard/srv-token-manager
-  tag: "e12f51f"
+  tag: "48f66f3"
   pullPolicy: IfNotPresent
 
 service:
