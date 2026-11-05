@@ -144,10 +144,19 @@ fi
 if [ "$TRIGGER_PROD" = true ]; then
     log_step "3/3 Acompanhando build no GitHub Actions e aplicando Helm via SSH (porta 22)..."
     if command -v gh >/dev/null 2>&1; then
-        sleep 3
-        RUN_ID=$(gh run list -R "keepguard/${SERVICE_NAME}" --branch main --limit 5 --json databaseId,headSha --jq ".[] | select(.headSha | startswith(\"${BUILD_SHA}\")) | .databaseId" | head -1)
-        if [ -n "${RUN_ID}" ]; then
-            gh run watch "${RUN_ID}" -R "keepguard/${SERVICE_NAME}" --exit-status --interval 15
+        RUN_ID=""
+        for _ in $(seq 1 30); do
+            RUN_ID=$(gh run list -R "keepguard/${SERVICE_NAME}" --branch main --limit 5 --json databaseId,headSha --jq ".[] | select(.headSha | startswith(\"${BUILD_SHA}\")) | .databaseId" | head -1)
+            [ -n "${RUN_ID}" ] && break
+            sleep 2
+        done
+        if [ -z "${RUN_ID}" ]; then
+            log_error "Build de ${BUILD_SHA} não apareceu no GitHub Actions em 60 s: nada foi aplicado."
+            exit 1
+        fi
+        if ! gh run watch "${RUN_ID}" -R "keepguard/${SERVICE_NAME}" --exit-status --interval 15; then
+            log_error "O build de ${BUILD_SHA} FALHOU: nada foi aplicado."
+            exit 1
         fi
     fi
     sed -i '' "s|^[[:space:]]*tag:.*|  tag: \"${BUILD_SHA}\"|g" "${SCRIPT_DIR}/helm/values.yaml"
@@ -156,8 +165,23 @@ if [ "$TRIGGER_PROD" = true ]; then
         git commit -q -m "chore(helm): bump ${SERVICE_NAME} image tag to ${BUILD_SHA}"
         git push origin "${CURRENT_BRANCH}" || true
     fi
-    helm template "${SERVICE_NAME}" "${SCRIPT_DIR}/helm" -n keepguard \
-        | ssh -o BatchMode=yes root@31.97.175.92 "kubectl apply -n keepguard -f -"
+    # Deployment por replace (o chart é a verdade): o apply sobre Deployment criado sem a anotação do kubectl
+    # mantinha variáveis que saíram do chart e misturava value com valueFrom (deploy inválido na janela de vhost,
+    # 05/11/2026). Demais recursos seguem por apply. --save-config deixa a anotação para os próximos.
+    HELM_TMP="$(mktemp -d)"
+    helm template "${SERVICE_NAME}" "${SCRIPT_DIR}/helm" -n keepguard > "${HELM_TMP}/todos.yaml"
+    python3 - "${HELM_TMP}" <<'PY_SEPARAR'
+import sys, yaml
+d = sys.argv[1]
+docs = [x for x in yaml.safe_load_all(open(d + "/todos.yaml")) if x]
+yaml.safe_dump_all([x for x in docs if x.get("kind") == "Deployment"], open(d + "/deployment.yaml", "w"))
+yaml.safe_dump_all([x for x in docs if x.get("kind") != "Deployment"], open(d + "/resto.yaml", "w"))
+PY_SEPARAR
+    if grep -q "kind:" "${HELM_TMP}/resto.yaml"; then
+        ssh -o BatchMode=yes root@31.97.175.92 "kubectl apply -n keepguard -f -" < "${HELM_TMP}/resto.yaml"
+    fi
+    ssh -o BatchMode=yes root@31.97.175.92 'T=$(mktemp) && cat > "$T" && { kubectl -n keepguard replace --save-config -f "$T" || kubectl -n keepguard create --save-config -f "$T"; }; R=$?; rm -f "$T"; exit $R' < "${HELM_TMP}/deployment.yaml"
+    rm -rf "${HELM_TMP}"
     ssh -o BatchMode=yes root@31.97.175.92 "kubectl rollout status deployment/${SERVICE_NAME} -n keepguard --timeout=300s"
     if [ -x "${SCRIPT_DIR}/../../../scripts/verificar-infra.sh" ]; then
         "${SCRIPT_DIR}/../../../scripts/verificar-infra.sh"
