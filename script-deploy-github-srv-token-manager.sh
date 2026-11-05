@@ -177,10 +177,13 @@ docs = [x for x in yaml.safe_load_all(open(d + "/todos.yaml")) if x]
 yaml.safe_dump_all([x for x in docs if x.get("kind") == "Deployment"], open(d + "/deployment.yaml", "w"))
 yaml.safe_dump_all([x for x in docs if x.get("kind") != "Deployment"], open(d + "/resto.yaml", "w"))
 PY_SEPARAR
+    ssh -o BatchMode=yes root@31.97.175.92 'T=$(mktemp) && cat > "$T" && { kubectl -n keepguard replace --save-config -f "$T" || kubectl -n keepguard create --save-config -f "$T"; }; R=$?; rm -f "$T"; exit $R' < "${HELM_TMP}/deployment.yaml"
+    # Services e demais recursos só depois do rollout: um Service que passa a procurar a porta pelo nome
+    # ("http") deixa o pod antigo, que não tinha portas com nome, sem tráfego até o novo subir (bff-auth, 05/11/2026).
+    ssh -o BatchMode=yes root@31.97.175.92 "kubectl rollout status deployment/${SERVICE_NAME} -n keepguard --timeout=300s"
     if grep -q "kind:" "${HELM_TMP}/resto.yaml"; then
         ssh -o BatchMode=yes root@31.97.175.92 "kubectl apply -n keepguard -f -" < "${HELM_TMP}/resto.yaml"
     fi
-    ssh -o BatchMode=yes root@31.97.175.92 'T=$(mktemp) && cat > "$T" && { kubectl -n keepguard replace --save-config -f "$T" || kubectl -n keepguard create --save-config -f "$T"; }; R=$?; rm -f "$T"; exit $R' < "${HELM_TMP}/deployment.yaml"
     rm -rf "${HELM_TMP}"
     ssh -o BatchMode=yes root@31.97.175.92 "kubectl rollout status deployment/${SERVICE_NAME} -n keepguard --timeout=300s"
     if [ -x "${SCRIPT_DIR}/../../../scripts/verificar-infra.sh" ]; then
