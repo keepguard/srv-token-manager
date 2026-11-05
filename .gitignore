@@ -15,7 +15,6 @@ htmlcov/
 *.log
 
 # Poetry
-poetry.lock
 
 # IDE
 .vscode/
