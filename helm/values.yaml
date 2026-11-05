@@ -1,6 +1,6 @@
 image:
   repository: ghcr.io/keepguard/srv-token-manager
-  tag: "1.0.8"
+  tag: "1.0.13"
   pullPolicy: IfNotPresent
 
 service:
@@ -13,7 +13,7 @@ resources:
     memory: 128Mi
 
 env:
-  appEnv: dev
+  appEnv: prod
   redisHost: "redis"
   redisPort: 6379
   rabbitmqHost: "rabbitmq-service"

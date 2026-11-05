@@ -20,10 +20,11 @@ class AuditEventPublisher:
         self.enabled = os.getenv("AUDIT_ENABLED", "true").lower() not in ("0", "false", "no")
         self.host = os.getenv("RABBITMQ_HOST", "localhost")
         self.port = int(os.getenv("RABBITMQ_PORT", "5672"))
-        self.user = os.getenv("RABBITMQ_USER", os.getenv("RABBITMQ_DEFAULT_USER", "guest"))
-        self.password = os.getenv("RABBITMQ_PASSWORD", os.getenv("RABBITMQ_DEFAULT_PASS", "guest"))
-        self.vhost = os.getenv("RABBITMQ_VHOST", "/")
-        self.exchange = os.getenv("AUDIT_EXCHANGE", "srv-audit-exchange-local")
+        self.user = os.getenv("RABBITMQ_USER", os.getenv("RABBITMQ_DEFAULT_USER", "kg_token_manager"))
+        self.password = os.getenv("RABBITMQ_PASSWORD", os.getenv("RABBITMQ_DEFAULT_PASS", ""))
+        raw_vhost = (os.getenv("RABBITMQ_VHOST", "/") or "/").strip()
+        self.vhost = "/" if raw_vhost in ("", "/") else raw_vhost.lstrip("/")
+        self.exchange = os.getenv("AUDIT_EXCHANGE", "srv-audit-exchange-prod")
         self.routing_key = os.getenv("AUDIT_ROUTING_KEY", "audit.event")
 
     def publish(
@@ -71,6 +72,7 @@ class AuditEventPublisher:
                 exchange=self.exchange,
                 routing_key=self.routing_key,
                 body=json.dumps(event).encode("utf-8"),
+                mandatory=True,
                 properties=pika.BasicProperties(
                     content_type="application/json",
                     delivery_mode=2,

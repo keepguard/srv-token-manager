@@ -35,6 +35,22 @@ spec:
           value: {{ .Values.env.rabbitmqHost | quote }}
         - name: RABBITMQ_PORT
           value: {{ .Values.env.rabbitmqPort | quote }}
+        - name: RABBITMQ_USER
+          valueFrom:
+            configMapKeyRef:
+              name: keepguard-config
+              key: RABBITMQ_DEFAULT_USER
+        - name: RABBITMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keepguard-secret
+              key: RABBITMQ_DEFAULT_PASS
+        - name: RABBITMQ_VHOST
+          valueFrom:
+            configMapKeyRef:
+              name: keepguard-config
+              key: RABBITMQ_VHOST
+              optional: true
         - name: AUDIT_EXCHANGE
           value: {{ .Values.env.auditExchange | quote }}
         ports:

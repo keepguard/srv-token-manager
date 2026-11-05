@@ -121,7 +121,7 @@ if [ "$DEPLOY_DOCKER" = true ]; then
             PRIMARY_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-${BUILD_SHA}"
             LATEST_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-latest"
         fi
-        DOCKER_BUILDKIT=1 docker build -f Dockerfile -t "${PRIMARY_TAG}" -t "${LATEST_TAG}" .
+        DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -f Dockerfile -t "${PRIMARY_TAG}" -t "${LATEST_TAG}" .
         docker push "${PRIMARY_TAG}" || true
         docker push "${LATEST_TAG}" || true
         if [ -d "${DOCKER_COMPOSE_DIR}" ] && [ -f "${DOCKER_COMPOSE_FILE}" ]; then
@@ -142,12 +142,25 @@ if [ "$DEPLOY_DOCKER" = true ]; then
 fi
 
 if [ "$TRIGGER_PROD" = true ]; then
-    log_step "3/3 Pipeline de Produção disparado no GitHub Actions!"
-    log_info "O build Docker e o deploy no Kubernetes estão rodando na nuvem."
+    log_step "3/3 Acompanhando build no GitHub Actions e aplicando Helm via SSH (porta 22)..."
     if command -v gh >/dev/null 2>&1; then
-        log_info "Acompanhe o workflow com: gh run watch -R keepguard/${SERVICE_NAME}"
-    else
-        log_info "Veja o status em: https://github.com/keepguard/${SERVICE_NAME}/actions"
+        sleep 3
+        RUN_ID=$(gh run list -R "keepguard/${SERVICE_NAME}" --branch main --limit 5 --json databaseId,headSha --jq ".[] | select(.headSha | startswith(\"${BUILD_SHA}\")) | .databaseId" | head -1)
+        if [ -n "${RUN_ID}" ]; then
+            gh run watch "${RUN_ID}" -R "keepguard/${SERVICE_NAME}" --exit-status --interval 15
+        fi
+    fi
+    sed -i '' "s|^[[:space:]]*tag:.*|  tag: \"${BUILD_SHA}\"|g" "${SCRIPT_DIR}/helm/values.yaml"
+    git add "${SCRIPT_DIR}/helm/values.yaml"
+    if ! git diff --cached --quiet; then
+        git commit -q -m "chore(helm): bump ${SERVICE_NAME} image tag to ${BUILD_SHA}"
+        git push origin "${CURRENT_BRANCH}" || true
+    fi
+    helm template "${SERVICE_NAME}" "${SCRIPT_DIR}/helm" -n keepguard \
+        | ssh -o BatchMode=yes root@31.97.175.92 "kubectl apply -n keepguard -f -"
+    ssh -o BatchMode=yes root@31.97.175.92 "kubectl rollout status deployment/${SERVICE_NAME} -n keepguard --timeout=300s"
+    if [ -x "${SCRIPT_DIR}/../../../scripts/verificar-infra.sh" ]; then
+        "${SCRIPT_DIR}/../../../scripts/verificar-infra.sh"
     fi
 fi
 
