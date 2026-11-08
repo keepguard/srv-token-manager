@@ -122,8 +122,8 @@ if [ "$DEPLOY_DOCKER" = true ]; then
             LATEST_TAG="${REGISTRY}/${SERVICE_NAME}:${CURRENT_BRANCH}-latest"
         fi
         DOCKER_BUILDKIT=1 docker build --platform linux/amd64 -f Dockerfile -t "${PRIMARY_TAG}" -t "${LATEST_TAG}" .
-        docker push "${PRIMARY_TAG}" || true
-        docker push "${LATEST_TAG}" || true
+        docker push "${PRIMARY_TAG}" || { log_error "docker push falhou (login vencido no GHCR? rode: docker login ghcr.io). Nada foi para o cluster."; exit 1; }
+        docker push "${LATEST_TAG}" || { log_error "docker push falhou (login vencido no GHCR? rode: docker login ghcr.io). Nada foi para o cluster."; exit 1; }
         if [ -d "${DOCKER_COMPOSE_DIR}" ] && [ -f "${DOCKER_COMPOSE_FILE}" ]; then
             if [[ "$OSTYPE" == "darwin"* ]]; then
                 sed -i '' "s|image: ${REGISTRY}/${SERVICE_NAME}:.*|image: ${PRIMARY_TAG}|g" "${DOCKER_COMPOSE_FILE}"
